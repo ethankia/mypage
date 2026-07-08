@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>404 // TARGET NOT FOUND</title>
+<meta name="description" content="Target not found.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #050806;
+    --green: #39ff6a;
+    --green-dim: #1f7a3f;
+    --white-green: #d9ffe4;
+    --red: #ff3b3b;
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; height:100%; width:100%;
+    background: var(--bg);
+    color: var(--green);
+    font-family:'Share Tech Mono', monospace;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center;
+    padding: 6vh 6vw;
+  }
+  .crt{
+    position:fixed; inset:0; pointer-events:none;
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.18) 3px);
+    mix-blend-mode: multiply;
+  }
+  .code{
+    font-family:'Orbitron', sans-serif;
+    font-weight:900;
+    font-size: clamp(60px, 14vw, 140px);
+    color: var(--white-green);
+    text-shadow: 0 0 18px rgba(255,59,59,0.4);
+    line-height:1;
+    letter-spacing: 0.05em;
+  }
+  .msg{
+    margin-top: 14px;
+    letter-spacing: 0.3em;
+    font-size: clamp(12px, 1.6vw, 16px);
+    color: var(--red);
+  }
+  .sub{
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--green-dim);
+    letter-spacing: 0.1em;
+  }
+  a.back{
+    display:inline-block;
+    margin-top: 34px;
+    color: var(--green-dim);
+    text-decoration:none;
+    border: 1px solid var(--green-dim);
+    padding: 10px 22px;
+    letter-spacing: 0.2em;
+    font-size: 12px;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  a.back:hover{ color: var(--green); border-color: var(--green); }
+  .cursor{
+    display:inline-block; width:8px; height:1em; background:var(--green);
+    vertical-align:middle; animation: blink 1s step-end infinite;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+</style>
+</head>
+<body>
+<div class="crt"></div>
+<div>
+  <div class="code">404</div>
+  <div class="msg">TARGET NOT FOUND</div>
+  <div class="sub">REQUESTED FILE DOES NOT EXIST IN THIS SECTOR<span class="cursor"></span></div>
+  <a class="back" href="/">&larr; RETURN TO BASE</a>
+</div>
+</body>
+</html>

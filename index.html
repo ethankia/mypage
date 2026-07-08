@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SECURE TERMINAL // COUNTDOWN</title>
+<meta name="description" content="Classified countdown terminal. Tracking active.">
+<meta property="og:title" content="SECURE TERMINAL // COUNTDOWN">
+<meta property="og:description" content="Classified countdown terminal. Tracking active.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SECURE TERMINAL // COUNTDOWN">
+<meta name="twitter:description" content="Classified countdown terminal. Tracking active.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #050806;
+    --panel: #0b140d;
+    --panel-line: #143620;
+    --green: #39ff6a;
+    --green-dim: #1f7a3f;
+    --green-faint: #0f4023;
+    --white-green: #d9ffe4;
+    --amber: #ffb000;
+    --red: #ff3b3b;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0; height:100%; width:100%;
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+  }
+  .display{
+    display:none;
+    position:fixed;
+    inset:0;
+  }
+  #stage.ready .display{ display:block; }
+
+  /* ---------- BOOT SCREEN ---------- */
+  #boot{
+    position:fixed; inset:0;
+    background: var(--bg);
+    padding: 6vh 6vw;
+    font-size: clamp(11px, 1.6vw, 15px);
+    line-height: 1.7;
+    color: var(--green);
+    z-index: 50;
+  }
+  #boot .line{ opacity:0; white-space:pre-wrap; }
+  #boot .cursor{
+    display:inline-block; width:8px; height:1em; background:var(--green);
+    vertical-align:middle; animation: blink 1s step-end infinite;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+  #stage.ready #boot{ display:none; }
+
+  /* ---------- MAIN HUD ---------- */
+  #hud{
+    position:fixed; inset:0;
+    display:flex; flex-direction:column;
+    padding: 3vh 3vw;
+  }
+
+  .topbar{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    border-bottom: 1px solid var(--panel-line);
+    padding-bottom: 14px; margin-bottom: 18px;
+    font-size: 12px; letter-spacing: 0.12em;
+    color: var(--green-dim);
+    flex-wrap: wrap; gap: 10px;
+  }
+  .topbar .stamp{
+    color: var(--red);
+    border: 1px solid var(--red);
+    padding: 3px 10px;
+    letter-spacing: 0.2em;
+    font-size: 11px;
+    animation: stamp-flicker 4s infinite;
+  }
+  @keyframes stamp-flicker{
+    0%,92%,100%{ opacity:1; }
+    93%{ opacity:0.4; }
+    95%{ opacity:1; }
+    96%{ opacity:0.3; }
+    97%{ opacity:1; }
+  }
+  .topbar .meta{ text-align:right; }
+  .topbar .meta div{ margin-bottom:2px; }
+  .topbar .meta .live-clock{ color: var(--green); }
+
+  .main{
+    flex:1;
+    display:grid;
+    grid-template-columns: 1fr;
+    place-items:center;
+    text-align:center;
+    position:relative;
+  }
+
+  .eyebrow{
+    letter-spacing: 0.5em;
+    font-size: clamp(10px, 1.1vw, 13px);
+    color: var(--amber);
+    margin-bottom: 18px;
+  }
+  .eyebrow .id{ color: var(--green-dim); letter-spacing:0.3em; }
+
+  .clock{
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    display:flex;
+    gap: clamp(10px, 2.5vw, 28px);
+    justify-content:center;
+    flex-wrap: wrap;
+  }
+  .unit{
+    display:flex; flex-direction:column; align-items:center;
+    min-width: clamp(64px, 12vw, 130px);
+  }
+  .unit .num{
+    font-size: clamp(38px, 8vw, 96px);
+    color: var(--white-green);
+    text-shadow: 0 0 12px rgba(57,255,106,0.55), 0 0 28px rgba(57,255,106,0.25);
+    line-height:1;
+    font-variant-numeric: tabular-nums;
+  }
+  .unit .lbl{
+    margin-top: 8px;
+    font-family:'Share Tech Mono', monospace;
+    font-size: clamp(9px, 1vw, 12px);
+    letter-spacing: 0.35em;
+    color: var(--green-dim);
+  }
+  .sep{
+    font-size: clamp(28px, 6vw, 70px);
+    color: var(--green-faint);
+    align-self:flex-start;
+    margin-top: clamp(2px, 1vw, 10px);
+    animation: blink 1.4s step-end infinite;
+  }
+
+  .target-line{
+    margin-top: 26px;
+    font-size: clamp(11px, 1.2vw, 14px);
+    letter-spacing: 0.15em;
+    color: var(--green-dim);
+  }
+  .target-line span{ color: var(--green); }
+
+  .bottombar{
+    border-top: 1px solid var(--panel-line);
+    padding-top: 12px; margin-top: 18px;
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+    font-size: 11px; letter-spacing: 0.1em; color: var(--green-dim);
+  }
+  .bottombar .prompt{ color: var(--green); }
+  .bottombar .prompt .cursor2{
+    display:inline-block; width:7px; height:12px; background:var(--green);
+    vertical-align:middle; margin-left:2px; animation: blink 1s step-end infinite;
+  }
+
+  /* side readouts */
+  .readout-col{
+    position:absolute;
+    top:0; bottom:0;
+    width: clamp(120px, 14vw, 200px);
+    display:flex; flex-direction:column; justify-content:center;
+    gap: 10px;
+    font-size: 10px;
+    color: var(--green-dim);
+    letter-spacing: 0.05em;
+    pointer-events:none;
+  }
+  .readout-col.left{ left: 0; }
+  .readout-col.right{ right: 0; text-align:right; }
+  .readout-col .row{ opacity:0.8; }
+  .readout-col .row b{ color: var(--green); font-weight:400; }
+  .readout-col .bar{
+    height:3px; background: var(--panel-line); position:relative; overflow:hidden; margin-top:3px;
+  }
+  .readout-col .bar i{
+    position:absolute; left:0; top:0; bottom:0; background: var(--green-dim); width:40%;
+    animation: bar-shift 3.5s ease-in-out infinite alternate;
+  }
+  @keyframes bar-shift{ 0%{ width:20%; } 100%{ width:85%; } }
+
+  @media (max-width: 900px){
+    .readout-col{ display:none; }
+  }
+
+  /* scanlines + vignette overlay */
+  .crt{
+    position:fixed; inset:0; pointer-events:none; z-index:40;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,0) 0px,
+        rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0.18) 3px
+      );
+    mix-blend-mode: multiply;
+  }
+  .vignette{
+    position:fixed; inset:0; pointer-events:none; z-index:41;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.65) 100%);
+  }
+  .flicker{
+    position:fixed; inset:0; pointer-events:none; z-index:42;
+    background: rgba(57,255,106,0.02);
+    animation: flicker 6s infinite;
+  }
+  @keyframes flicker{
+    0%,96%,100%{ opacity:0; }
+    97%{ opacity:1; }
+    98%{ opacity:0; }
+    99%{ opacity:0.6; }
+  }
+
+  /* ---------- LAUNCH BUTTON ---------- */
+  .launch-wrap{
+    margin-top: 34px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap: 10px;
+  }
+  .launch-btn{
+    position:relative;
+    font-family:'Orbitron', sans-serif;
+    font-weight:900;
+    font-size: clamp(14px, 1.6vw, 20px);
+    letter-spacing: 0.3em;
+    color: var(--red);
+    background: repeating-linear-gradient(
+      45deg,
+      #1a0505,
+      #1a0505 10px,
+      #200606 10px,
+      #200606 20px
+    );
+    border: 2px solid var(--red);
+    border-radius: 999px;
+    padding: 16px 46px;
+    cursor: pointer;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    gap: 12px;
+    box-shadow: 0 0 0px rgba(255,59,59,0.0);
+    animation: launch-pulse 2.2s ease-in-out infinite;
+    transition: transform 0.15s ease;
+  }
+  .launch-btn:hover{
+    transform: scale(1.04);
+  }
+  .launch-btn:active{
+    transform: scale(0.97);
+  }
+  .launch-btn .cap{
+    width: 10px; height: 10px; border-radius:50%;
+    background: var(--red);
+    box-shadow: 0 0 8px var(--red);
+    flex-shrink:0;
+  }
+  @keyframes launch-pulse{
+    0%,100%{ box-shadow: 0 0 8px rgba(255,59,59,0.25), inset 0 0 12px rgba(255,59,59,0.08); }
+    50%{ box-shadow: 0 0 26px rgba(255,59,59,0.55), inset 0 0 18px rgba(255,59,59,0.18); }
+  }
+  .launch-sub{
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--green-dim);
+  }
+
+  /* ---------- BOTTOMBAR CONTROLS ---------- */
+  .right-controls{
+    display:flex; align-items:center; gap: 14px;
+    flex-wrap:wrap;
+  }
+  .mini-icon-btn{
+    background:none; border:none; padding:0;
+    width: 16px; height: 16px;
+    color: var(--panel-line);
+    cursor: pointer;
+    display:flex; align-items:center; justify-content:center;
+    opacity: 0.55;
+    transition: color 0.2s ease, opacity 0.2s ease;
+  }
+  .mini-icon-btn:hover{ color: var(--green-dim); opacity: 1; }
+  .mini-icon-btn svg{ width: 100%; height: 100%; }
+
+  .nuke-btn{
+    background: none;
+    border: 1px solid var(--green-dim);
+    color: var(--red);
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    font-size: 11px;
+    line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+  }
+  .nuke-btn:hover{
+    opacity: 1;
+    transform: scale(1.15);
+    box-shadow: 0 0 10px rgba(255,59,59,0.5);
+  }
+
+  /* ---------- COORDINATE SELECT + PRECISION LAUNCH ---------- */
+  .coord-modal{
+    position: fixed;
+    top: 24px; left: 50%;
+    transform: translate(-50%, -140%);
+    background: rgba(5,8,6,0.95);
+    border: 1px solid var(--red);
+    padding: 14px 22px;
+    z-index: 70;
+    display:flex; align-items:center; gap: 16px;
+    flex-wrap: wrap;
+    transition: transform 0.25s ease;
+    box-shadow: 0 0 20px rgba(255,59,59,0.3);
+  }
+  .coord-modal.show{ transform: translate(-50%, 0); }
+  .coord-title{
+    font-family:'Orbitron', sans-serif;
+    font-weight:700;
+    letter-spacing:0.2em;
+    color: var(--red);
+    font-size: 13px;
+  }
+  .coord-sub{
+    font-size: 10px;
+    letter-spacing:0.1em;
+    color: var(--green-dim);
+  }
+  .coord-cancel{
+    background:none;
+    border:1px solid var(--green-dim);
+    color:var(--green-dim);
+    font-size:10px;
+    letter-spacing:0.15em;
+    padding:6px 12px;
+    cursor:pointer;
+    font-family:'Share Tech Mono', monospace;
+  }
+  .coord-cancel:hover{ color:var(--green); border-color:var(--green); }
+  body.selecting-coords{ cursor: crosshair; }
+
+  .flight-dot{
+    position:fixed;
+    width:6px; height:6px;
+    background: var(--amber);
+    border-radius:50%;
+    box-shadow: 0 0 12px 3px rgba(255,176,0,0.85);
+    z-index:60;
+    pointer-events:none;
+    transform:translate(-50%,-50%);
+  }
+
+  .shock-wave{
+    position:fixed;
+    border: 2px solid var(--amber);
+    border-radius:50%;
+    transform: translate(-50%,-50%);
+    z-index:46;
+    pointer-events:none;
+    animation: wave-expand 0.6s ease-out forwards;
+  }
+  @keyframes wave-expand{
+    0%{ width:10px; height:10px; opacity:1; }
+    100%{ width:280px; height:280px; opacity:0; }
+  }
+
+  .scorch-rip{
+    position:fixed;
+    transform: translate(-50%,-50%) rotate(var(--rot));
+    background: radial-gradient(circle, #000 0%, #000 55%, rgba(20,5,0,0.92) 72%, rgba(0,0,0,0) 100%);
+    clip-path: polygon(50% 0%, 61% 12%, 80% 8%, 74% 26%, 96% 30%, 78% 42%, 92% 58%,
+                        70% 60%, 74% 82%, 54% 68%, 46% 92%, 38% 66%, 16% 78%,
+                        28% 56%, 4% 52%, 24% 38%, 8% 20%, 30% 24%, 34% 4%, 46% 20%);
+    box-shadow: 0 0 20px 4px rgba(255,90,0,0.45), inset 0 0 14px rgba(255,140,0,0.5);
+    z-index: 45;
+    pointer-events: none;
+    animation: rip-settle 0.5s ease-out;
+  }
+  @keyframes rip-settle{
+    0%{ transform: translate(-50%,-50%) rotate(var(--rot)) scale(0.15); opacity:0; }
+    55%{ transform: translate(-50%,-50%) rotate(var(--rot)) scale(1.2); opacity:1; }
+    100%{ transform: translate(-50%,-50%) rotate(var(--rot)) scale(1); opacity:1; }
+  }
+
+  /* ---------- MELTDOWN OVERLAY ---------- */
+  .meltdown-overlay{
+    position: fixed; inset:0;
+    background: #000;
+    z-index: 100;
+    display:none;
+    align-items:center; justify-content:center;
+    flex-direction:column;
+  }
+  .meltdown-overlay.active{ display:flex; }
+  .meltdown-countdown{
+    font-family:'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: clamp(80px, 22vw, 260px);
+    color: var(--red);
+    text-shadow: 0 0 40px rgba(255,59,59,0.7);
+  }
+  .meltdown-endscreen{
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    gap: 24px;
+  }
+  .meltdown-endscreen.show{ display:flex; }
+  .meltdown-title{
+    font-family:'Orbitron', sans-serif;
+    font-weight:900;
+    letter-spacing: 0.2em;
+    font-size: clamp(20px, 4vw, 34px);
+    color: var(--red);
+    text-shadow: 0 0 24px rgba(255,59,59,0.6);
+  }
+  .reboot-btn{
+    font-family:'Share Tech Mono', monospace;
+    letter-spacing: 0.25em;
+    font-size: 13px;
+    background: none;
+    border: 1px solid var(--green-dim);
+    color: var(--green);
+    padding: 12px 28px;
+    cursor: pointer;
+  }
+  .reboot-btn:hover{ border-color: var(--green); }
+
+  .flash-white{
+    position: fixed; inset:0;
+    background: #fff;
+    z-index: 99;
+    opacity:0;
+    pointer-events:none;
+  }
+  .flash-white.go{
+    animation: flash-out 0.5s ease-out forwards;
+  }
+  @keyframes flash-out{
+    0%{ opacity: 1; }
+    100%{ opacity: 0; }
+  }
+
+  #stage.melting #hud{
+    animation: melt-shift 4s ease-in forwards;
+  }
+  @keyframes melt-shift{
+    0%{ filter: url(#meltFilter) hue-rotate(0deg) brightness(1); transform: translateY(0); }
+    100%{ filter: url(#meltFilter) hue-rotate(-25deg) brightness(0.4); transform: translateY(3vh); }
+  }
+
+  ::selection{ background: var(--green-dim); color: var(--bg); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <filter id="meltFilter">
+    <feTurbulence id="meltTurb" type="fractalNoise" baseFrequency="0.008 0.05" numOctaves="2" seed="7" result="noise"/>
+    <feDisplacementMap id="meltDisp" in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div class="flash-white" id="flashWhite"></div>
+
+<div id="stage">
+
+  <div id="boot"></div>
+
+  <div class="display" id="hud">
+    <div class="readout-col left" id="leftReadout"></div>
+    <div class="readout-col right" id="rightReadout"></div>
+
+    <div class="topbar">
+      <div>
+        SYS://CHRONOS-9 &nbsp;·&nbsp; UPLINK STABLE &nbsp;·&nbsp; ENCRYPTION AES-256
+        <br>
+        <span class="stamp">EYES ONLY</span>
+      </div>
+      <div class="meta">
+        <div>SESSION ID: <span id="sessId"></span></div>
+        <div class="live-clock" id="liveClock"></div>
+        <div>SURVEILLANCE LOG: <span id="visitorCount">···</span> CONNECTIONS TRACKED</div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div>
+        <div class="eyebrow">COUNTDOWN TO TARGET DATE &nbsp;<span class="id">// FILE NO. 11-18</span></div>
+        <div class="clock" id="clock">
+          <div class="unit"><div class="num" id="dd">00</div><div class="lbl">DAYS</div></div>
+          <div class="sep">:</div>
+          <div class="unit"><div class="num" id="hh">00</div><div class="lbl">HOURS</div></div>
+          <div class="sep">:</div>
+          <div class="unit"><div class="num" id="mm">00</div><div class="lbl">MINUTES</div></div>
+          <div class="sep">:</div>
+          <div class="unit"><div class="num" id="ss">00</div><div class="lbl">SECONDS</div></div>
+        </div>
+        <div class="target-line">NEXT TARGET: <span id="targetDate"></span> &nbsp;·&nbsp; STATUS: <span id="statusWord">AWAITING</span></div>
+
+        <div class="launch-wrap">
+          <a class="launch-btn" href="about.html">
+            <span class="cap"></span>LAUNCH<span class="cap"></span>
+          </a>
+          <div class="launch-sub">PRESS TO PROCEED</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottombar">
+      <div class="prompt">root@chronos:~$ tracking active<span class="cursor2"></span></div>
+      <div class="right-controls">
+        <button class="mini-icon-btn" id="launcherBtn" aria-label="launch control" title="">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="12" cy="12" r="9"/>
+            <circle cx="12" cy="12" r="3.2"/>
+            <line x1="12" y1="1.2" x2="12" y2="5.5"/>
+            <line x1="12" y1="18.5" x2="12" y2="22.8"/>
+            <line x1="1.2" y1="12" x2="5.5" y2="12"/>
+            <line x1="18.5" y1="12" x2="22.8" y2="12"/>
+          </svg>
+        </button>
+        <span>CLEARANCE LEVEL: OMEGA &nbsp;·&nbsp; DO NOT DISTRIBUTE</span>
+        <button class="nuke-btn" id="nukeBtn" aria-label="self destruct" title="">☢</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- COORDINATE SELECT MODAL -->
+<div id="coordModal" class="coord-modal">
+  <div class="coord-title">SELECT COORDINATES</div>
+  <div class="coord-sub">CLICK ANYWHERE ON SCREEN TO LAUNCH</div>
+  <button class="coord-cancel" id="coordCancel">CANCEL</button>
+</div>
+
+<!-- MELTDOWN OVERLAY -->
+<div id="meltdownOverlay" class="meltdown-overlay">
+  <div class="meltdown-countdown" id="meltdownCountdown"></div>
+  <div class="meltdown-endscreen" id="meltdownEndscreen">
+    <div class="meltdown-title">SYSTEM FAILURE</div>
+    <button class="reboot-btn" id="rebootBtn">REBOOT SYSTEM</button>
+  </div>
+</div>
+
+<div class="crt"></div>
+<div class="vignette"></div>
+<div class="flicker"></div>
+
+<script>
+(function(){
+  // ---------- BOOT SEQUENCE ----------
+  var bootLines = [
+    "INITIATING SECURE UPLINK...",
+    "HANDSHAKE WITH RELAY NODE 7 ... OK",
+    "VERIFYING CREDENTIALS ..........",
+    "CLEARANCE LEVEL: OMEGA — GRANTED",
+    "DECRYPTING TARGET COORDINATES ...",
+    "LOADING CHRONOS-9 COUNTDOWN MODULE",
+    "CALIBRATING ATOMIC REFERENCE CLOCK",
+    "ALL SYSTEMS NOMINAL",
+    "",
+    "ACCESS GRANTED — WELCOME, AGENT"
+  ];
+
+  var bootEl = document.getElementById('boot');
+  var stage = document.getElementById('stage');
+  var i = 0;
+
+  function typeLine(text, cb){
+    var lineEl = document.createElement('div');
+    lineEl.className = 'line';
+    lineEl.style.opacity = 1;
+    bootEl.appendChild(lineEl);
+    var j = 0;
+    var speed = 14;
+    (function step(){
+      lineEl.textContent = text.slice(0, j);
+      j++;
+      if(j <= text.length){
+        setTimeout(step, speed);
+      } else {
+        cb();
+      }
+    })();
+  }
+
+  function runBoot(){
+    if(i >= bootLines.length){
+      setTimeout(function(){
+        stage.classList.add('ready');
+        startClock();
+      }, 350);
+      return;
+    }
+    typeLine(bootLines[i], function(){
+      i++;
+      setTimeout(runBoot, 90);
+    });
+  }
+
+  // cursor at top while booting
+  var cursorLine = document.createElement('div');
+  cursorLine.className = 'line';
+  cursorLine.style.opacity = 1;
+  cursorLine.innerHTML = '<span class="cursor"></span>';
+
+  runBoot();
+
+  // ---------- SESSION ID / CLOCK ----------
+  document.getElementById('sessId').textContent =
+    Math.random().toString(16).slice(2, 6).toUpperCase() + '-' +
+    Math.random().toString(16).slice(2, 6).toUpperCase();
+
+  function pad(n){ return n.toString().padStart(2, '0'); }
+
+  function updateLiveClock(){
+    var now = new Date();
+    document.getElementById('liveClock').textContent =
+      now.toISOString().slice(0,19).replace('T', ' ') + ' UTC';
+  }
+
+  // ---------- COUNTDOWN LOGIC ----------
+  var TARGET_MONTH = 10; // November (0-indexed)
+  var TARGET_DAY = 18;
+
+  function getNextTarget(){
+    var now = new Date();
+    var year = now.getFullYear();
+    var target = new Date(year, TARGET_MONTH, TARGET_DAY, 0, 0, 0);
+    if(target.getTime() <= now.getTime()){
+      target = new Date(year + 1, TARGET_MONTH, TARGET_DAY, 0, 0, 0);
+    }
+    return target;
+  }
+
+  var target = getNextTarget();
+  document.getElementById('targetDate').textContent =
+    target.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase();
+
+  function tick(){
+    var now = new Date();
+    var diff = target.getTime() - now.getTime();
+    if(diff <= 0){
+      target = getNextTarget();
+      diff = target.getTime() - now.getTime();
+    }
+    var days = Math.floor(diff / (1000*60*60*24));
+    var hours = Math.floor((diff / (1000*60*60)) % 24);
+    var mins = Math.floor((diff / (1000*60)) % 60);
+    var secs = Math.floor((diff / 1000) % 60);
+
+    document.getElementById('dd').textContent = pad(days);
+    document.getElementById('hh').textContent = pad(hours);
+    document.getElementById('mm').textContent = pad(mins);
+    document.getElementById('ss').textContent = pad(secs);
+
+    var statusWords = ['TRACKING', 'MONITORING', 'STANDBY', 'ACTIVE'];
+    document.getElementById('statusWord').textContent =
+      days < 1 ? 'IMMINENT' : statusWords[Math.floor(now.getTime()/8000) % statusWords.length];
+
+    updateLiveClock();
+  }
+
+  function startClock(){
+    tick();
+    setInterval(tick, 1000);
+    buildReadouts();
+  }
+
+  // ---------- FAKE SIDE READOUTS ----------
+  function hex(len){
+    var s = '';
+    var chars = '0123456789ABCDEF';
+    for(var k=0;k<len;k++) s += chars[Math.floor(Math.random()*16)];
+    return s;
+  }
+
+  function buildReadouts(){
+    var left = document.getElementById('leftReadout');
+    var right = document.getElementById('rightReadout');
+
+    var leftRows = [
+      ['NODE', hex(4)+'-'+hex(4)],
+      ['FREQ', (Math.random()*40+120).toFixed(2)+' MHz'],
+      ['SIGNAL', ''],
+      ['PROTOCOL', 'CHRONOS/1.4'],
+      ['LATENCY', (Math.random()*20+4).toFixed(1)+' ms']
+    ];
+    var rightRows = [
+      ['GRID REF', hex(3)+'.'+hex(3)],
+      ['STREAM', hex(6)],
+      ['INTEGRITY', ''],
+      ['BUFFER', (Math.random()*30+65).toFixed(0)+'%'],
+      ['CIPHER', 'AES-256-GCM']
+    ];
+
+    function render(container, rows){
+      container.innerHTML = '';
+      rows.forEach(function(r){
+        var row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = r[0] + ': <b>' + r[1] + '</b>';
+        container.appendChild(row);
+        if(r[1] === ''){
+          row.innerHTML = r[0];
+          var bar = document.createElement('div');
+          bar.className = 'bar';
+          bar.innerHTML = '<i></i>';
+          container.appendChild(bar);
+        }
+      });
+    }
+
+    render(left, leftRows);
+    render(right, rightRows);
+
+    setInterval(function(){
+      leftRows[0][1] = hex(4)+'-'+hex(4);
+      leftRows[1][1] = (Math.random()*40+120).toFixed(2)+' MHz';
+      leftRows[4][1] = (Math.random()*20+4).toFixed(1)+' ms';
+      rightRows[1][1] = hex(6);
+      rightRows[3][1] = (Math.random()*30+65).toFixed(0)+'%';
+      render(left, leftRows);
+      render(right, rightRows);
+    }, 2500);
+  }
+
+  // ---------- VISITOR COUNTER ----------
+  // Swap the workspace/counter name below for your own if you want a fresh count.
+  (function loadVisitorCount(){
+    var el = document.getElementById('visitorCount');
+    fetch('https://api.counterapi.dev/v1/ethankia-org/site-visits/up')
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        var val = data && (data.count ?? data.value ?? data.data?.up_count);
+        el.textContent = (val !== undefined && val !== null) ? val : '???';
+      })
+      .catch(function(){
+        el.textContent = '???';
+      });
+  })();
+
+  // ---------- PRECISION LAUNCH: SELECT COORDINATES ----------
+  var launcherBtn = document.getElementById('launcherBtn');
+  var coordModal = document.getElementById('coordModal');
+  var coordCancel = document.getElementById('coordCancel');
+  var selecting = false;
+
+  launcherBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(selecting) return;
+    selecting = true;
+    coordModal.classList.add('show');
+    document.body.classList.add('selecting-coords');
+  });
+
+  coordCancel.addEventListener('click', function(e){
+    e.stopPropagation();
+    selecting = false;
+    coordModal.classList.remove('show');
+    document.body.classList.remove('selecting-coords');
+  });
+
+  document.addEventListener('click', function(e){
+    if(!selecting) return;
+    if(coordModal.contains(e.target)) return;
+    selecting = false;
+    coordModal.classList.remove('show');
+    document.body.classList.remove('selecting-coords');
+    fireAt(e.clientX, e.clientY);
+  });
+
+  function fireAt(x, y){
+    var origin = { x: window.innerWidth * 0.05, y: window.innerHeight * 0.95 };
+    var dot = document.createElement('div');
+    dot.className = 'flight-dot';
+    document.body.appendChild(dot);
+
+    var start = null;
+    var duration = 550;
+
+    function step(ts){
+      if(!start) start = ts;
+      var t = Math.min((ts - start) / duration, 1);
+      var ease = t < 0.5 ? 2*t*t : -1 + (4 - 2*t) * t;
+      var cx = origin.x + (x - origin.x) * ease;
+      var cy = origin.y + (y - origin.y) * ease;
+      dot.style.left = cx + 'px';
+      dot.style.top = cy + 'px';
+      if(t < 1){
+        requestAnimationFrame(step);
+      } else {
+        dot.remove();
+        detonate(x, y);
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function detonate(x, y){
+    var wave = document.createElement('div');
+    wave.className = 'shock-wave';
+    wave.style.left = x + 'px';
+    wave.style.top = y + 'px';
+    document.body.appendChild(wave);
+    setTimeout(function(){ wave.remove(); }, 650);
+
+    var rip = document.createElement('div');
+    rip.className = 'scorch-rip';
+    var size = 90 + Math.random() * 70;
+    rip.style.left = x + 'px';
+    rip.style.top = y + 'px';
+    rip.style.width = size + 'px';
+    rip.style.height = size + 'px';
+    rip.style.setProperty('--rot', (Math.random() * 360) + 'deg');
+    document.body.appendChild(rip);
+    // persists until page reload — intentionally never removed
+  }
+
+  // ---------- NUKE / MELTDOWN SEQUENCE ----------
+  var nukeBtn = document.getElementById('nukeBtn');
+  var overlay = document.getElementById('meltdownOverlay');
+  var countdownEl = document.getElementById('meltdownCountdown');
+  var endscreen = document.getElementById('meltdownEndscreen');
+  var flashWhite = document.getElementById('flashWhite');
+  var rebootBtn = document.getElementById('rebootBtn');
+  var meltDisp = document.getElementById('meltDisp');
+
+  nukeBtn.addEventListener('click', function(){
+    overlay.classList.add('active');
+    countdownEl.style.display = 'block';
+    endscreen.classList.remove('show');
+    var n = 10;
+    countdownEl.textContent = n;
+
+    var iv = setInterval(function(){
+      n--;
+      if(n > 0){
+        countdownEl.textContent = n;
+      } else {
+        clearInterval(iv);
+        countdownEl.textContent = '0';
+        setTimeout(triggerMeltdown, 400);
+      }
+    }, 550);
+  });
+
+  function triggerMeltdown(){
+    countdownEl.style.display = 'none';
+    overlay.classList.remove('active');
+
+    flashWhite.classList.remove('go');
+    void flashWhite.offsetWidth;
+    flashWhite.classList.add('go');
+
+    document.getElementById('stage').classList.add('melting');
+
+    // animate the SVG displacement scale up for a "melting" warp
+    var startTime = null;
+    function animateMelt(ts){
+      if(!startTime) startTime = ts;
+      var elapsed = ts - startTime;
+      var duration = 3800;
+      var progress = Math.min(elapsed / duration, 1);
+      meltDisp.setAttribute('scale', (progress * 140).toFixed(1));
+      if(progress < 1){
+        requestAnimationFrame(animateMelt);
+      }
+    }
+    requestAnimationFrame(animateMelt);
+
+    setTimeout(function(){
+      overlay.classList.add('active');
+      endscreen.classList.add('show');
+    }, 4200);
+  }
+
+  rebootBtn.addEventListener('click', function(){
+    location.reload();
+  });
+
+})();
+</script>
+
+</body>
+</html>
