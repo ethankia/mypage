@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ETHAN</title>
+<title>SECURE TERMINAL // COUNTDOWN</title>
 <meta name="description" content="Classified countdown terminal. Tracking active.">
 <meta property="og:title" content="SECURE TERMINAL // COUNTDOWN">
 <meta property="og:description" content="Classified countdown terminal. Tracking active.">
@@ -151,6 +151,24 @@
     color: var(--green-dim);
   }
   .target-line span{ color: var(--green); }
+
+  .reached-msg{
+    display:none;
+    font-family:'Orbitron', sans-serif;
+    font-weight:900;
+    font-size: clamp(28px, 6vw, 64px);
+    line-height:1.25;
+    color: var(--white-green);
+    text-shadow: 0 0 16px rgba(57,255,106,0.6), 0 0 34px rgba(57,255,106,0.3);
+    letter-spacing: 0.06em;
+    animation: reached-pulse 2s ease-in-out infinite;
+  }
+  #stage.target-day .clock{ display:none; }
+  #stage.target-day .reached-msg{ display:block; }
+  @keyframes reached-pulse{
+    0%,100%{ opacity:1; }
+    50%{ opacity:0.75; }
+  }
 
   .bottombar{
     border-top: 1px solid var(--panel-line);
@@ -514,6 +532,7 @@
           <div class="sep">:</div>
           <div class="unit"><div class="num" id="ss">00</div><div class="lbl">SECONDS</div></div>
         </div>
+        <div class="reached-msg" id="reachedMsg">TARGET REACHED.<br>HAPPY BIRTHDAY</div>
         <div class="target-line">NEXT TARGET: <span id="targetDate"></span> &nbsp;·&nbsp; STATUS: <span id="statusWord">AWAITING</span></div>
 
         <div class="launch-wrap">
@@ -659,6 +678,16 @@
 
   function tick(){
     var now = new Date();
+
+    if(now.getMonth() === TARGET_MONTH && now.getDate() === TARGET_DAY){
+      document.getElementById('stage').classList.add('target-day');
+      document.getElementById('statusWord').textContent = 'COMPLETE';
+      updateLiveClock();
+      return;
+    } else {
+      document.getElementById('stage').classList.remove('target-day');
+    }
+
     var diff = target.getTime() - now.getTime();
     if(diff <= 0){
       target = getNextTarget();
